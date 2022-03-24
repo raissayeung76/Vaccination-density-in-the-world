@@ -1,0 +1,71 @@
+---
+title: "Assignment 3"
+author: "Yeung Sui Ping-Raissa 3035871587"
+date: "2/2/2022"
+output: html_document
+---
+
+For assignment 3, you need to produce a map based on the method we learned in class. You can find some useful data from the sources suggested in the lecture notes. There is no standard for assignment 3, please choose the aesthetic style you prefer. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# clear the working environment
+rm(list=ls())
+
+# set up working directory
+setwd("/Users/visitor/Desktop/Assignment_3_YeungSuiPing")
+getwd()
+```
+
+
+# Loading libraries
+```{r cars}
+library(pacman)
+p_load("ggplot2", "tidyverse", "sf", "maptools","tigris","ggthemes","viridis")
+```
+
+
+# Importing dataset
+```{r}
+# Import the world boundaries
+data(wrld_simpl)
+st_as_sf(wrld_simpl)-> world
+# Import the convid related data
+vaccination <- read.csv("https://covid.ourworldindata.org/data/owid-covid-data.csv")
+```
+
+
+# Preparing for the data
+```{r}
+# Data cleaning 
+vaccination %>% 
+  group_by(iso_code) %>% 
+  arrange(desc(date)) %>%
+  slice(1:1) %>% 
+  ungroup() %>% 
+  select(iso_code,location,date,population_density,population,total_vaccinations) %>%  
+  na.omit() %>% 
+  mutate(total_vaccination_density=population_density/population*total_vaccinations) -> vaccination
+
+# Join world data and vaccination data set together 
+world <- geo_join(world,vaccination,"ISO3","iso_code")
+
+```
+
+
+# Plot the map
+```{r}
+ggplot(data = world) +
+  geom_sf(aes(fill = total_vaccinations), color="#b37400", size=0.3) +
+  scale_fill_viridis(option = "cividis", trans = "sqrt",alpha=0.7)+
+   xlab("longitude") + 
+  ylab("latitude") +
+  theme(panel.background = element_rect(fill="white"),
+        panel.grid.minor=element_line(colour='gray'))+
+  ggtitle("Vaccination density in the world", subtitle = paste0("(",world$date[3],", ", length(unique(world$NAME)), " countries)"))
+
+ggsave("Vaccination density in the world.png",
+       dpi = 1200, width = 6, height = 5)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
